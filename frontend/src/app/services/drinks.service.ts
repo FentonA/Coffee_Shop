@@ -21,7 +21,7 @@ export class DrinksService {
 
   url = environment.apiServerUrl;
 
-  public items: {[key: number]: Drink} = {};
+  public items: {[key: number]: Drink} 
   // = {
   //                             1: {
   //                             id: 1,
