@@ -44,12 +44,12 @@ def get_token_auth_header():
             'code': 'invalid header',
             'description': 'Authorizaion header must with the Bearer'
     }, 401)
-    elif parts == 1:
+    elif len(parts) == 1:
         raise AuthError({
         'code': 'Invalid_header',
         'description': 'Token not found'
     }, 401)
-    elif parts > 2:
+    elif len(parts) > 2:
         raise AuthError({
         'code': 'invalid_header',
         'description': 'Authorization needs Bearer token' 

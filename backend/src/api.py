@@ -34,7 +34,7 @@ def get_drinks():
     try:
         menu_drinks = Drink.query.all()
         drinks = [drink.short() for drink in menu_drinks]
-        if len(drinks == 0):
+        if len(drinks) == 0:
             abort(404)
         return jsonify({
             'success': True,
@@ -112,7 +112,7 @@ def new_coffee(token):
 @requires_auth('patch:drinks')
 def patch_drinks(payload, drink_id):
 
-        # grab information from front end in a simplified format
+    
     body = request.get_json()
     update_title = body['title']
     update_recipe = body['recipe']
@@ -162,11 +162,11 @@ def delete_da_drink(payload, drink_id):
             'delete': id,
             'drinks': drinks
         }, 200)
-        
+
     except:
         abort(422)
 
-# Error Handling
+
 '''
 Example error handling for unprocessable entity
 '''
