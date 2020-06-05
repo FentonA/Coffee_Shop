@@ -5,7 +5,6 @@ from functools import wraps
 from jose import jwt
 from urllib.request import urlopen
 
-
 AUTH0_DOMAIN = 'dev-hsnuo.auth0.com'
 ALGORITHMS = ['RS256']
 API_AUDIENCE = 'shop_login'
@@ -130,7 +129,7 @@ def verify_decode_jwt(token):
                 'description': 'Token expired'
         }, 401)
 
-        except jwt.JWTClaimError:
+        except jwt.JWTClaimsError:
             raise AuthError({
             'code': 'token_expired',
             'description': 'Incorrect claims, please check the audienc and issuer'
@@ -164,7 +163,10 @@ def requires_auth(permission=''):
             token = get_token_auth_header()
             payload = verify_decode_jwt(token)
             check_permissions(permission, payload)
-            return f(payload, *args, **kwargs)
+            if(kwargs.get('id')):	
+                return f(kwargs.get('id'))	
+            else:
+                return f(payload, *args, **kwargs)
 
-        return wrapper
+        return wrapper 
     return requires_auth_decorator

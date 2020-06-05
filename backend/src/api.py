@@ -87,7 +87,7 @@ def new_coffee(token):
 
     new_Drink.insert()
     drink_all = Drink.query.all()
-    drink = [drink.long for drink in drink_all]
+    drink = [drink.long() for drink in drink_all]
 
     return jsonify({
         'success': True,
