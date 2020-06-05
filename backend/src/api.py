@@ -5,6 +5,7 @@ from sqlalchemy import exc
 import json
 from flask_cors import CORS
 import jose
+from werkzeug.datastructures import ImmutableMultiDict
 
 from .database.models import db_drop_and_create_all, setup_db, Drink, db
 from .auth.auth import AuthError, requires_auth
@@ -29,17 +30,13 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks', methods= ['GET'])
+@app.route('/drinks', methods= ['GET'], endpoint='get_drinks')
 def get_drinks():
     try:
-        menu_drinks = Drink.query.all()
-        drinks = [drink.short() for drink in menu_drinks]
-        if len(drinks) == 0:
-            abort(404)
-        return jsonify({
+        return json.dumps({
             'success': True,
-            'drinks': drinks
-        })
+            'drinks': [drink.short() for drink in Drink.query.all()]
+        }), 200
     except:
         abort(400)
 
@@ -51,17 +48,19 @@ def get_drinks():
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks-detail', methods =['GET'])
+@app.route('/drinks', methods =['GET'], endpoint='drinks_detail')
 @requires_auth('get:drinks-detail')
 def get_drink_details():
-    menu_drinks = Drink.query.all()
-    drink_details = [drinks_details.long() for drinks_details in menu_drinks]
-    if len(drink_details) == 0:
-        abort(404)
-    return jsonify({
-        'success': True,
-        'drink_details': drink_details
-    })
+    try:
+        return json.dumps({
+            'success': True,
+            'drinks': [drinks_details.long() for drinks_details in Drink.query.all()]
+        }), 200
+    except:
+        return json.dumps({
+            'success': False,
+            'error': "An error occurred"
+        }), 500
 
 
 '''
@@ -89,7 +88,7 @@ def new_coffee(token):
     drink_all = Drink.query.all()
     drink = [drink.long() for drink in drink_all]
 
-    return jsonify({
+    return json.dumps({
         'success': True,
         "drinks": drink
     })
@@ -129,7 +128,7 @@ def patch_drinks(payload, drink_id):
         updated_drinks.recipe = update_recipe
     updated_drinks.update()
 
-    return jsonify({
+    return json.dumps({
         'success': True,
         'drinks': updated_drinks.long()
     })
@@ -157,9 +156,9 @@ def delete_da_drink(payload, drink_id):
         del_drinks.delete()
 
         drinks = Drink.query.all()
-        return jsonify({
+        return json.dumps({
             'success': True,
-            'delete': id,
+            'delete': drink_id,
             'drinks': drinks
         }, 200)
 
