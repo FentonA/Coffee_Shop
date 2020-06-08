@@ -1,11 +1,9 @@
-
 import os
 from flask import Flask, request, jsonify, abort
 from sqlalchemy import exc
 import json
 from flask_cors import CORS
 import jose
-from werkzeug.datastructures import ImmutableMultiDict
 
 from .database.models import db_drop_and_create_all, setup_db, Drink, db
 from .auth.auth import AuthError, requires_auth
@@ -30,13 +28,15 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks', methods= ['GET'], endpoint='get_drinks')
+@app.route('/drinks', methods= ['GET'])
 def get_drinks():
     try:
+        menu_drinks = Drink.query.all()
+        drinks = [drink.short() for drink in menu_drinks]
         return json.dumps({
             'success': True,
-            'drinks': [drink.short() for drink in Drink.query.all()]
-        }), 200
+            'drinks': drinks
+        })
     except:
         abort(400)
 
@@ -48,20 +48,18 @@ def get_drinks():
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks', methods =['GET'], endpoint='drinks_detail')
+@app.route('/drinks-detail', methods =['GET'])
 @requires_auth('get:drinks-detail')
-def get_drink_details():
+def get_drink_details(payload):
     try:
+        menu_drinks = Drink.query.all()
+        drink_details = [drink_detail.long() for drink_detail in menu_drinks]
         return json.dumps({
             'success': True,
-            'drinks': [drinks_details.long() for drinks_details in Drink.query.all()]
-        }), 200
+            'drinks': [drink_detail.long() for drink_detail in menu_drinks]
+        })
     except:
-        return json.dumps({
-            'success': False,
-            'error': "An error occurred"
-        }), 500
-
+        abort(400)
 
 '''
 @TODO implement endpoint
@@ -77,21 +75,23 @@ def get_drink_details():
 
 @app.route('/drinks', methods=['POST'])
 @requires_auth('post:drinks')
-def new_coffee(token):
-    body = request.get_data()
-    new_Drink = Drink(
-        title = body['title'],
-        recipe = body['recipe']
-    )
+def drinks(f):
+    body = request.get_json()
+    new_drinks = Drink(title=body.get('title'),
+                  recipe=body.get('recipe') if type(body.get('recipe')) == str
+                  else json.dumps(body.get('recipe')))
+    try:
+        new_drinks.insert()
 
-    new_Drink.insert()
-    drink_all = Drink.query.all()
-    drink = [drink.long() for drink in drink_all]
-
-    return json.dumps({
-        'success': True,
-        "drinks": drink
-    })
+        return json.dumps({
+            'success': True,
+            "drinks": [drink.long() for drink in Drink.query.all()]
+        }), 200
+    except: 
+          return json.dumps({
+            'success': False,
+            'error': "An error occurred"
+        }), 500
 
 '''
 @TODO implement endpoint
@@ -111,16 +111,11 @@ def new_coffee(token):
 @requires_auth('patch:drinks')
 def patch_drinks(payload, drink_id):
 
-    
     body = request.get_json()
-    update_title = body['title']
-    update_recipe = body['recipe']
+    update_title = body.get('title')
+    update_recipe = body.get('recipe')
 
     updated_drinks = Drink.query.filter(Drink.id == drink_id).one_or_none()
-
-    
-    if updated_drinks is None:
-        abort(404)
         
     if update_title:
         updated_drinks.title = update_title
@@ -130,7 +125,7 @@ def patch_drinks(payload, drink_id):
 
     return json.dumps({
         'success': True,
-        'drinks': updated_drinks.long()
+        'drinks': [updated_drinks.long()]
     })
 
 '''
@@ -150,17 +145,12 @@ def patch_drinks(payload, drink_id):
 @requires_auth('delete:drinks')
 def delete_da_drink(payload, drink_id):
     try:
-        if drink_id is None:
-            abort(404)
         del_drinks = Drink.query.filter(Drink.id == drink_id).one_or_none()
         del_drinks.delete()
-
-        drinks = Drink.query.all()
         return json.dumps({
             'success': True,
-            'delete': drink_id,
-            'drinks': drinks
-        }, 200)
+            'drink': del_drinks.id,
+        }), 200
 
     except:
         abort(422)
@@ -210,15 +200,11 @@ def page_not_found(error):
     error handler should conform to general task above
 '''
 @app.errorhandler(AuthError)
-def autherror(error):
-    error_details = error.error
-    error_status_code = error
-    
-    return jsonify({
-        'success': False,
-        'error': error_status_code,
-        'message': error_details['description'] 
-    }), error_status_code
+def handle_auth_error(ex):
+
+    response = jsonify(ex.error)
+    response.status_code = ex.status_code
+    return response
 
 
 @app.errorhandler(400)
